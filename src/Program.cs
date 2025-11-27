@@ -1,65 +1,63 @@
 ﻿using System;
-using InventorySystem.Features.AccessControl;
-using InventorySystem.Features.ProductCatalog;
-using InventorySystem.Features.Stakeholders;
-using InventorySystem.Features.InventoryControl;
+using System.Collections.Generic;
+using InventorySystem.Domain;
+using InventorySystem.Infraestructure;
+using InventorySystem.Application;
 
 namespace InventorySystem
 {
     class Program
     {
-        // Instancias estáticas de nuestros servicios (Simulando Inyección de Dependencias)
+        // Servicios
         static UserService _userService = new UserService();
         static ProductRepository _productRepo = new ProductRepository();
         static StakeholderService _stakeholderService = new StakeholderService();
         static StockService _stockService = new StockService();
         
-        // Guardamos el usuario que inició sesión para la Auditoría
+        // Usuario actual (necesario para guardar internamente el registro, aunque no lo mostremos)
         static User? _currentUser;
 
         static void Main(string[] args)
         {
-            // 1. INICIALIZACIÓN DEL SISTEMA (BOOTSTRAP)
-            Console.WriteLine("Iniciando sistema... Configurando base de datos...");
             InitializeDatabase();
-            
-            // 2. CREACIÓN DE USUARIO POR DEFECTO (Si es la primera vez)
-            // Esto permite entrar al sistema sin tocar la BD manualmente.
-            _userService.RegisterUser("admin", "admin123", "Admin", "SYSTEM_BOOTSTRAP");
+            _userService.RegisterUser("admin", "admin123", "Admin", "SYSTEM");
 
-            // 3. PANTALLA DE LOGIN
-            while (_currentUser == null)
+            while (true)
             {
-                ShowLoginScreen();
-            }
+                _currentUser = null;
+                while (_currentUser == null) ShowLoginScreen();
 
-            // 4. BUCLE PRINCIPAL DEL MENÚ
-            bool exit = false;
-            while (!exit)
-            {
-                Console.Clear();
-                Console.WriteLine($"=== SISTEMA DE INVENTARIO (Usuario: {_currentUser.Username}) ===");
-                Console.WriteLine("1. Gestión de Productos (Catálogo)");
-                Console.WriteLine("2. Gestión de Actores (Clientes/Proveedores)");
-                Console.WriteLine("3. CONTROL DE INVENTARIO (Entradas/Salidas/Stock)");
-                Console.WriteLine("4. Salir");
-                Console.Write("Seleccione una opción: ");
-
-                switch (Console.ReadLine())
+                bool logout = false;
+                while (!logout)
                 {
-                    case "1": ManageCatalog(); break;
-                    case "2": ManageStakeholders(); break;
-                    case "3": ManageInventory(); break;
-                    case "4": exit = true; break;
+                    Console.Clear();
+                    // Cabecera simple
+                    Console.WriteLine("=== SISTEMA DE INVENTARIO ===");
+                    Console.WriteLine("1. PRODUCTOS (Catálogo)");
+                    Console.WriteLine("2. PROVEEDORES");
+                    Console.WriteLine("3. MOVIMIENTOS (Compras y Ventas)"); // Aquí es donde se manejan los batches
+                    
+                    if (_currentUser.Role == "Admin") Console.WriteLine("4. USUARIOS");
+
+                    Console.WriteLine("5. Salir");
+                    Console.Write("\nOpción: ");
+
+                    switch (Console.ReadLine())
+                    {
+                        case "1": ManageCatalog(); break;
+                        case "2": ManageStakeholders(); break;
+                        case "3": ManageInventory(); break; // <-- AQUÍ AGREGAS LOS BATCHES
+                        case "4": 
+                            if (_currentUser.Role == "Admin") ManageUsers(); 
+                            break;
+                        case "5": logout = true; break;
+                    }
                 }
             }
         }
 
-        // --- MÉTODOS DE CONFIGURACIÓN ---
-
         static void InitializeDatabase()
         {
-            // Llamamos a cada servicio para que cree sus tablas si no existen
             _userService.EnsureTableExists();
             _productRepo.EnsureTableExists();
             _stakeholderService.EnsureTablesExist();
@@ -70,222 +68,292 @@ namespace InventorySystem
         {
             Console.Clear();
             Console.WriteLine("=== LOGIN ===");
-            Console.Write("Usuario: ");
-            string user = Console.ReadLine() ?? "";
-            Console.Write("Contraseña: ");
-            string pass = Console.ReadLine() ?? "";
-
-            var loggedUser = _userService.Login(user, pass);
-            if (loggedUser != null)
-            {
-                _currentUser = loggedUser;
-                Console.WriteLine("¡Bienvenido!");
-            }
-            else
-            {
-                Console.WriteLine("Credenciales incorrectas. Presione una tecla para reintentar.");
-                Console.ReadKey();
-            }
+            Console.Write("Usuario: "); string user = Console.ReadLine() ?? "";
+            Console.Write("Password: "); string pass = Console.ReadLine() ?? "";
+            _currentUser = _userService.Login(user, pass);
+            if (_currentUser == null) { Console.WriteLine("Error."); Console.ReadKey(); }
         }
 
-        // --- MÓDULO 1: CATÁLOGO ---
-
+        // ==========================================
+        //         1. PRODUCTOS (Simplificado)
+        // ==========================================
         static void ManageCatalog()
         {
-            Console.Clear();
-            Console.WriteLine("--- CATÁLOGO DE PRODUCTOS ---");
-            Console.WriteLine("1. Ver lista de productos");
-            Console.WriteLine("2. Crear nuevo producto");
-            Console.Write("Opción: ");
-            
-            if (Console.ReadLine() == "2")
+            bool back = false;
+            while (!back)
             {
-                Console.Write("Nombre del Producto: ");
-                string name = Console.ReadLine() ?? "Sin Nombre";
-                Console.Write("SKU (Código único): ");
-                string sku = Console.ReadLine() ?? "000";
-                
-                Console.WriteLine("Categoría (0 = Groceries, 1 = Electronics): ");
-                string catInput = Console.ReadLine();
-                ProductCategory category = (catInput == "1") ? ProductCategory.Electronics : ProductCategory.Groceries;
-
-                Console.WriteLine("¿Es perecedero? (s/n): ");
-                bool isPerishable = (Console.ReadLine()?.ToLower() == "s");
-
-                try
-                {
-                    var newProd = new Product 
-                    { 
-                        Name = name, 
-                        Sku = sku, 
-                        Category = category, 
-                        IsPerishable = isPerishable 
-                    };
-                    
-                    // Pasamos el usuario actual para que quede registrado QUIÉN creó el producto
-                    _productRepo.CreateProduct(newProd, _currentUser.Username);
-                    Console.WriteLine("Producto creado exitosamente.");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error: {ex.Message}");
-                }
-            }
-            else
-            {
+                Console.Clear();
+                Console.WriteLine("--- LISTA DE PRODUCTOS ---");
                 var list = _productRepo.GetAllProducts();
+                
+                Console.WriteLine("{0,-4} | {1,-20} | {2,-10} | {3,-10}", "ID", "NOMBRE", "SKU", "TIPO");
+                Console.WriteLine(new string('-', 60));
                 foreach (var p in list)
+                    Console.WriteLine("{0,-4} | {1,-20} | {2,-10} | {3,-10}", p.Id, Truncate(p.Name, 20), p.Sku, p.Category);
+
+                Console.WriteLine("\n[1] Nuevo Producto");
+                Console.WriteLine("[2] Editar Nombre");
+                Console.WriteLine("[3] Eliminar Producto");
+                Console.WriteLine("[4] Volver");
+                Console.Write("Opción: ");
+
+                switch (Console.ReadLine())
                 {
-                    Console.WriteLine($"ID: {p.Id} | SKU: {p.Sku} | {p.Name} | Cat: {p.Category} | Perecedero: {p.IsPerishable}");
+                    case "1": 
+                        Console.Write("Nombre: "); string n = Console.ReadLine();
+                        Console.Write("SKU: "); string sku = Console.ReadLine();
+                        Console.WriteLine("Categoría: [1] Alimentos [2] Electrónica");
+                        var cat = (Console.ReadLine() == "2") ? ProductCategory.Electronics : ProductCategory.Groceries;
+                        Console.Write("¿Perecedero? (s/n): "); bool per = Console.ReadLine() == "s";
+                        _productRepo.CreateProduct(new Product{Name=n, Sku=sku, Category=cat, IsPerishable=per}, _currentUser.Username);
+                        break;
+                    case "2": 
+                        Console.Write("ID a Editar: "); if(int.TryParse(Console.ReadLine(), out int ide)) {
+                            var p = _productRepo.GetProductById(ide);
+                            if(p!=null){
+                                Console.Write("Nuevo Nombre: "); p.Name = Console.ReadLine();
+                                _productRepo.UpdateProduct(p, _currentUser.Username);
+                            }
+                        }
+                        break;
+                    case "3": 
+                        Console.Write("ID a Borrar: "); if(int.TryParse(Console.ReadLine(), out int idd)) 
+                            _productRepo.DeleteProduct(idd, _currentUser.Username);
+                        break;
+                    case "4": back = true; break;
                 }
             }
-            Console.WriteLine("\nPresione una tecla para volver...");
-            Console.ReadKey();
         }
 
-        // --- MÓDULO 2: ACTORES ---
-
+        // ==========================================
+        //         2. PROVEEDORES (Simplificado)
+        // ==========================================
         static void ManageStakeholders()
         {
-            Console.Clear();
-            Console.WriteLine("--- GESTIÓN DE ACTORES ---");
-            Console.WriteLine("1. Registrar Proveedor");
-            Console.WriteLine("2. Registrar Cliente");
-            Console.WriteLine("3. Ver Proveedores");
-            Console.Write("Opción: ");
-
-            var op = Console.ReadLine();
-            if (op == "1")
+            bool back = false;
+            while (!back)
             {
-                Console.Write("Nombre Proveedor: ");
-                string name = Console.ReadLine() ?? "";
-                Console.Write("Email Contacto: ");
-                string email = Console.ReadLine() ?? "";
-                
-                _stakeholderService.CreateSupplier(new Supplier { Name = name, ContactEmail = email }, _currentUser.Username);
-                Console.WriteLine("Proveedor registrado.");
-            }
-            else if (op == "3")
-            {
+                Console.Clear();
+                Console.WriteLine("--- PROVEEDORES ---");
                 var list = _stakeholderService.GetAllSuppliers();
-                foreach (var s in list) Console.WriteLine($"ID: {s.Id} | {s.Name} ({s.ContactEmail})");
+                foreach(var s in list) Console.WriteLine($"{s.Id} | {s.Name} | {s.ContactEmail}");
+
+                Console.WriteLine("\n[1] Nuevo Proveedor");
+                Console.WriteLine("[2] Editar");
+                Console.WriteLine("[3] Eliminar");
+                Console.WriteLine("[4] Volver");
+                
+                var op = Console.ReadLine();
+                if(op == "4") back = true;
+                else if(op == "1") {
+                    Console.Write("Nombre: "); string n = Console.ReadLine();
+                    Console.Write("Email: "); string e = Console.ReadLine();
+                    _stakeholderService.CreateSupplier(new Supplier{Name=n, ContactEmail=e}, _currentUser.Username);
+                }
+                else if(op == "2") {
+                    Console.Write("ID: "); int.TryParse(Console.ReadLine(), out int id);
+                    var s = _stakeholderService.GetSupplierById(id);
+                    if(s!=null) {
+                        Console.Write("Nombre: "); string nn = Console.ReadLine(); if(nn!="") s.Name=nn;
+                        Console.Write("Email: "); string ee = Console.ReadLine(); if(ee!="") s.ContactEmail=ee;
+                        _stakeholderService.UpdateSupplier(s, _currentUser.Username);
+                    }
+                }
+                else if(op == "3") {
+                    Console.Write("ID: "); int.TryParse(Console.ReadLine(), out int id);
+                    _stakeholderService.DeleteSupplier(id, _currentUser.Username);
+                }
             }
-            // (Omitimos lógica de cliente para brevedad, es similar a proveedor)
+        }
+
+// ==========================================
+        //   3. MOVIMIENTOS (Inventario - Lógica Completa)
+        // ==========================================
+        static void ManageInventory()
+        {
+            bool back = false;
+            while(!back)
+            {
+                Console.Clear();
+                Console.WriteLine("--- RESUMEN DE STOCK ---");
+                Console.WriteLine("{0,-4} | {1,-20} | {2,-10}", "ID", "PRODUCTO", "TOTAL");
+                Console.WriteLine(new string('-', 40));
+
+                var prods = _productRepo.GetAllProducts();
+                
+                if (prods.Count == 0) Console.WriteLine("      (El catálogo está vacío)");
+                else
+                {
+                    foreach(var p in prods)
+                    {
+                        int stock = _stockService.GetTotalStock(p.Id);
+                        if(stock == 0) Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine("{0,-4} | {1,-20} | {2,-10}", p.Id, Truncate(p.Name, 20), stock);
+                        Console.ResetColor();
+                    }
+                }
+                Console.WriteLine(new string('-', 40));
+
+                Console.WriteLine("\nACCIONES:");
+                Console.WriteLine("[1] 📥 REGISTRAR COMPRA (Entrada)");
+                Console.WriteLine("[2] 📤 REGISTRAR VENTA  (Salida)");
+                Console.WriteLine("[3] 📋 VER DETALLE DE LOTES (Costos y Fechas)"); // <--- NUEVO
+                Console.WriteLine("[4] Volver");
+                Console.Write("Opción: ");
+
+                var op = Console.ReadLine();
+
+                if (op == "1") // --- COMPRA ---
+                {
+                    if (prods.Count == 0) {
+                        Console.WriteLine("\n⚠️ Primero cree productos en el catálogo.");
+                        Console.ReadKey(); continue;
+                    }
+
+                    // 1. Validar Proveedores
+                    var suppliers = _stakeholderService.GetAllSuppliers();
+                    if (suppliers.Count == 0) {
+                        Console.WriteLine("\n⚠️ No hay proveedores. Registre uno en la Opción 2.");
+                        Console.ReadKey(); continue;
+                    }
+
+                    Console.WriteLine("\n--- NUEVA COMPRA ---");
+                    
+                    // Mostrar Proveedores
+                    Console.WriteLine("Proveedores Disponibles:");
+                    foreach (var s in suppliers) Console.WriteLine($"ID: {s.Id} - {s.Name}");
+                    
+                    Console.Write("ID Proveedor: ");
+                    if(!int.TryParse(Console.ReadLine(), out int sid) || suppliers.Find(s=>s.Id==sid)==null) {
+                        Console.WriteLine("❌ Proveedor no válido."); Console.ReadKey(); continue;
+                    }
+
+                    Console.Write("ID Producto: "); 
+                    if(!int.TryParse(Console.ReadLine(), out int pid)) continue;
+                    
+                    // BUSCAMOS EL PRODUCTO PARA SABER SI ES PERECEDERO
+                    var targetProduct = prods.Find(p => p.Id == pid);
+                    if (targetProduct == null) {
+                        Console.WriteLine("❌ Producto no encontrado."); Console.ReadKey(); continue;
+                    }
+
+                    Console.Write($"Cantidad de '{targetProduct.Name}': "); 
+                    int.TryParse(Console.ReadLine(), out int qty);
+                    
+                    Console.Write("Costo Unitario ($): "); 
+                    decimal.TryParse(Console.ReadLine(), out decimal cost);
+
+                    // --- LÓGICA DE FECHAS MEJORADA ---
+                    DateTime? finalExpDate = null;
+
+                    if (targetProduct.IsPerishable)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine("⚠️ ESTE PRODUCTO ES PERECEDERO. LA FECHA ES OBLIGATORIA.");
+                        Console.ResetColor();
+                        
+                        bool validDate = false;
+                        while (!validDate)
+                        {
+                            Console.Write("Fecha de Caducidad (yyyy-mm-dd): ");
+                            if (DateTime.TryParse(Console.ReadLine(), out DateTime d))
+                            {
+                                if (d > DateTime.Now) {
+                                    finalExpDate = d;
+                                    validDate = true;
+                                } else Console.WriteLine("❌ La fecha debe ser futura.");
+                            }
+                            else Console.WriteLine("❌ Formato incorrecto.");
+                        }
+                    }
+                    else
+                    {
+                        // Si NO es perecedero, ni siquiera preguntamos.
+                        finalExpDate = null;
+                    }
+
+                    var batch = new Batch
+                    {
+                        ProductId = pid, SupplierId = sid, Quantity = qty, CostPrice = cost,
+                        EntryDate = DateTime.Now, ExpirationDate = finalExpDate
+                    };
+
+                    _stockService.RegisterEntry(batch, _currentUser.Username);
+                    Console.WriteLine("✅ Compra registrada.");
+                    Console.ReadKey();
+                }
+                else if (op == "2") // --- VENTA ---
+                {
+                    Console.WriteLine("\n--- VENTA ---");
+                    Console.Write("ID Producto: ");
+                    if(int.TryParse(Console.ReadLine(), out int pid)) {
+                        int current = _stockService.GetTotalStock(pid);
+                        if(current == 0) Console.WriteLine("❌ No hay stock.");
+                        else {
+                            Console.Write($"Cantidad (Máx {current}): ");
+                            int.TryParse(Console.ReadLine(), out int qty);
+                            try {
+                                _stockService.RegisterExit(pid, qty, _currentUser.Username);
+                                Console.WriteLine("✅ Venta registrada.");
+                            } catch(Exception e) { Console.WriteLine($"❌ {e.Message}"); }
+                        }
+                        Console.ReadKey();
+                    }
+                }
+                else if (op == "3") // --- VER DETALLE DE LOTES (Costos) ---
+                {
+                    ShowBatchesDetail(prods); // Llamamos a una nueva función auxiliar
+                }
+                else if (op == "4") back = true;
+            }
+        }
+
+        // Función auxiliar para mostrar la tabla detallada con Costos
+        static void ShowBatchesDetail(List<Product> products)
+        {
+            Console.Clear();
+            Console.WriteLine("--- DETALLE DE LOTES ACTIVOS (COSTOS REALES) ---");
+            Console.WriteLine("{0,-5} | {1,-15} | {2,-8} | {3,-10} | {4,-12}", "LOTE", "PRODUCTO", "CANT.", "COSTO U.", "CADUCIDAD");
+            Console.WriteLine(new string('-', 65));
+
+            // Hack rápido: Usamos reflexión interna o lógica directa.
+            // Para hacerlo limpio, necesitamos un método en StockService que nos de los lotes.
+            // Como no queremos complicar StockService ahora, haremos una consulta rápida aquí 
+            // O idealmente agregamos un método en StockService (ver abajo).
             
+            // POR AHORA: Agregaremos el método necesario en StockService rápidamente.
+            // (Ver instrucciones abajo para agregar 'GetAllActiveBatches' en StockService)
+            var batches = _stockService.GetAllActiveBatches(); 
+
+            foreach (var b in batches)
+            {
+                var p = products.Find(x => x.Id == b.ProductId);
+                string pName = p != null ? Truncate(p.Name, 15) : "???";
+                string exp = b.ExpirationDate.HasValue ? b.ExpirationDate.Value.ToString("yyyy-MM-dd") : "-";
+
+                Console.WriteLine("{0,-5} | {1,-15} | {2,-8} | {3,-10} | {4,-12}", 
+                    b.Id, pName, b.Quantity, $"${b.CostPrice}", exp);
+            }
             Console.WriteLine("\nPresione una tecla para volver...");
             Console.ReadKey();
         }
 
-// --- MÓDULO 3: INVENTARIO (CORE) ---
-        // ACTUALIZADO: Con tabla visual de stock
-        static void ManageInventory()
+        static void ManageUsers()
         {
             Console.Clear();
-            Console.WriteLine("--- CONTROL DE INVENTARIO (FIFO) ---");
+            Console.WriteLine("--- USUARIOS ---");
+            var users = _userService.GetAllUsers();
+            foreach(var u in users) Console.WriteLine($"{u.Id} - {u.Username} ({u.Role})");
             
-            // PASO 1: MOSTRAR TABLA DE RESUMEN AUTOMÁTICAMENTE
-            Console.WriteLine("\n--- ESTADO ACTUAL DEL ALMACÉN ---");
-            Console.WriteLine("{0,-5} | {1,-20} | {2,-10} | {3,-15}", "ID", "PRODUCTO", "STOCK", "CATEGORÍA");
-            Console.WriteLine(new string('-', 60));
-
-            var allProducts = _productRepo.GetAllProducts();
-            
-            foreach (var p in allProducts)
-            {
-                // Calculamos el stock en tiempo real sumando los lotes
-                int totalStock = _stockService.GetTotalStock(p.Id);
-                
-                // Formato de tabla alineada
-                Console.WriteLine("{0,-5} | {1,-20} | {2,-10} | {3,-15}", 
-                    p.Id, 
-                    Truncate(p.Name, 20), 
-                    totalStock, 
-                    p.Category);
-            }
-            Console.WriteLine(new string('-', 60));
-            Console.WriteLine();
-
-            // PASO 2: MENÚ DE ACCIONES
-            Console.WriteLine("1. Registrar ENTRADA (Compra - Nuevo Lote)");
-            Console.WriteLine("2. Registrar SALIDA (Venta - FIFO)");
-            Console.WriteLine("3. Volver al menú principal");
-            Console.Write("Opción: ");
-
-            var op = Console.ReadLine();
-
-            if (op == "1") // COMPRA
-            {
-                Console.WriteLine("\n--- NUEVA ENTRADA (LOTE) ---");
-                // Ya tiene la tabla arriba para ver el ID
-                Console.Write("ID Producto: "); 
-                if (!int.TryParse(Console.ReadLine(), out int pid)) return;
-
-                Console.Write("ID Proveedor: "); int sid = int.Parse(Console.ReadLine() ?? "0");
-                Console.Write("Cantidad: "); int qty = int.Parse(Console.ReadLine() ?? "0");
-                Console.Write("Costo Unitario: "); decimal cost = decimal.Parse(Console.ReadLine() ?? "0");
-                
-                Console.Write("¿Tiene fecha expiración? (s/n): ");
-                DateTime? expDate = null;
-                if (Console.ReadLine()?.ToLower() == "s")
-                {
-                    Console.Write("Fecha (yyyy-mm-dd): ");
-                    if(DateTime.TryParse(Console.ReadLine(), out DateTime parsedDate))
-                        expDate = parsedDate;
-                }
-
-                var batch = new Batch
-                {
-                    ProductId = pid,
-                    SupplierId = sid,
-                    Quantity = qty,
-                    CostPrice = cost,
-                    EntryDate = DateTime.Now,
-                    ExpirationDate = expDate
-                };
-
-                _stockService.RegisterEntry(batch, _currentUser.Username);
-                Console.WriteLine("✅ Lote registrado correctamente.");
-            }
-            else if (op == "2") // VENTA (FIFO)
-            {
-                Console.WriteLine("\n--- NUEVA SALIDA (VENTA) ---");
-                // Ya tiene la tabla arriba para ver el ID
-                Console.Write("ID Producto a vender: "); 
-                if (!int.TryParse(Console.ReadLine(), out int pid)) return;
-                
-                int stock = _stockService.GetTotalStock(pid);
-                if (stock == 0)
-                {
-                    Console.WriteLine("⚠️ Error: Este producto no tiene stock disponible.");
-                }
-                else
-                {
-                    Console.Write($"Cantidad a vender (Máx {stock}): "); 
-                    int qty = int.Parse(Console.ReadLine() ?? "0");
-
-                    try
-                    {
-                        _stockService.RegisterExit(pid, qty, _currentUser.Username);
-                        Console.WriteLine("✅ Venta registrada. El stock se descontó de los lotes más antiguos.");
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"ERROR: {ex.Message}");
-                    }
-                }
-            }
-            
-            if (op != "3")
-            {
-                Console.WriteLine("\nPresione una tecla para continuar...");
-                Console.ReadKey();
+            Console.WriteLine("\n[1] Crear Empleado");
+            Console.WriteLine("[2] Volver");
+            if(Console.ReadLine() == "1") {
+                Console.Write("User: "); string u = Console.ReadLine();
+                Console.Write("Pass: "); string p = Console.ReadLine();
+                _userService.RegisterUser(u, p, "Employee", _currentUser.Username);
             }
         }
 
-        // Función auxiliar para cortar textos largos en la tabla
-        static string Truncate(string value, int maxChars)
-        {
-            return value.Length <= maxChars ? value : value.Substring(0, maxChars - 3) + "...";
-        }
+        static string Truncate(string s, int max) => (s?.Length ?? 0) > max ? s.Substring(0, max-3)+"..." : s ?? "";
     }
 }

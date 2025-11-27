@@ -1,6 +1,5 @@
-using InventorySystem.Shared;
 
-namespace InventorySystem.Features.Stakeholders
+namespace InventorySystem.Domain
 {
     /// <summary>
     /// [DOMINIO - ENTIDAD]

@@ -1,6 +1,6 @@
 using System;
 
-namespace InventorySystem.Shared
+namespace InventorySystem.Domain
 {
     /// <summary>
     /// [DOMINIO - CORE]

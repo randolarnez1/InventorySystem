@@ -1,7 +1,10 @@
 using System;
 using System.IO;
+using Microsoft.Data.Sqlite;
+using System.Collections.Generic;
+using InventorySystem.Domain; // <--- AGREGAR ESTO (Vital para ver Product, User, etc)
 
-namespace InventorySystem.Shared
+namespace InventorySystem.Infraestructure
 {
     /// <summary>
     /// [INFRAESTRUCTURA]

@@ -1,16 +1,16 @@
-using InventorySystem.Shared;
 
-namespace InventorySystem.Features.ProductCatalog
+namespace InventorySystem.Domain
 {
     /// <summary>
     /// [DOMINIO - ENUMERACIÓN]
     /// Define las únicas categorías permitidas en el sistema.
     /// Al hacerlo así, evitamos errores de escritura como "groceries" vs "Groceries".
     /// </summary>
-    public enum ProductCategory
+public enum ProductCategory
     {
-        Groceries,   // Alimentos (Perecederos generalmente)
-        Electronics  // Electrónica (No perecederos, alto valor)
+        Groceries,   // Alimentos
+        Electronics, // Electrónica
+        General      // <--- NUEVA CATEGORÍA AGREGADA
     }
 
     /// <summary>

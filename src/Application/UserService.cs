@@ -1,10 +1,11 @@
 using System;
-using System.Security.Cryptography; // Necesario para encriptar contraseñas
+using System.Security.Cryptography;
 using System.Text;
-using Microsoft.Data.Sqlite;        // Librería de SQLite
-using InventorySystem.Shared;
+using Microsoft.Data.Sqlite;
+using InventorySystem.Domain;       
+using InventorySystem.Infraestructure; // <--- AHORA SÍ FUNCIONARÁ
 
-namespace InventorySystem.Features.AccessControl
+namespace InventorySystem.Application
 {
     /// <summary>
     /// [LOGICA DE NEGOCIO Y ACCESO A DATOS]
@@ -149,6 +150,81 @@ namespace InventorySystem.Features.AccessControl
                     builder.Append(b.ToString("x2"));
                 }
                 return builder.ToString();
+            }
+        }
+
+        // [API] Obtener todos los usuarios (para que el Admin los vea)
+        public List<User> GetAllUsers()
+        {
+            var list = new List<User>();
+            using (var connection = new SqliteConnection(DatabaseConfig.ConnectionString))
+            {
+                connection.Open();
+                var command = connection.CreateCommand();
+                command.CommandText = "SELECT Id, Username, Role FROM Users WHERE IsDeleted = 0";
+
+                using (var reader = command.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        list.Add(new User 
+                        { 
+                            Id = reader.GetInt32(0),
+                            Username = reader.GetString(1),
+                            Role = reader.GetString(2)
+                        });
+                    }
+                }
+            }
+            return list;
+        }
+
+        // [API] Actualizar usuario (Cambiar contraseña o rol)
+        public void UpdateUser(int userId, string newPassword, string editorName)
+        {
+            using (var connection = new SqliteConnection(DatabaseConfig.ConnectionString))
+            {
+                connection.Open();
+                var command = connection.CreateCommand();
+
+                // Solo actualizamos contraseña y auditoría
+                command.CommandText = 
+                @"
+                    UPDATE Users 
+                    SET PasswordHash = $hash,
+                        LastModifiedAt = $date,
+                        LastModifiedBy = $editor
+                    WHERE Id = $id
+                ";
+
+                command.Parameters.AddWithValue("$hash", HashPassword(newPassword));
+                command.Parameters.AddWithValue("$date", DateTime.Now.ToString("o"));
+                command.Parameters.AddWithValue("$editor", editorName);
+                command.Parameters.AddWithValue("$id", userId);
+
+                command.ExecuteNonQuery();
+            }
+        }
+        
+        // Helper para obtener usuario por ID (necesario para verificar antes de editar)
+        public User? GetUserById(int id)
+        {
+            // Reutilizamos la lógica simple de buscar en la lista completa
+            return GetAllUsers().Find(u => u.Id == id);
+        }
+
+        // [API] Borrar usuario
+        public void DeleteUser(int id, string adminUser)
+        {
+            using (var connection = new SqliteConnection(DatabaseConfig.ConnectionString))
+            {
+                connection.Open();
+                var command = connection.CreateCommand();
+                command.CommandText = "UPDATE Users SET IsDeleted = 1, DeletedAt = $date, DeletedBy = $admin WHERE Id = $id";
+                command.Parameters.AddWithValue("$date", DateTime.Now.ToString("o"));
+                command.Parameters.AddWithValue("$admin", adminUser);
+                command.Parameters.AddWithValue("$id", id);
+                command.ExecuteNonQuery();
             }
         }
     }

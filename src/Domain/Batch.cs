@@ -1,7 +1,4 @@
-using System;
-using InventorySystem.Shared;
-
-namespace InventorySystem.Features.InventoryControl
+namespace InventorySystem.Domain
 {
     /// <summary>
     /// [DOMINIO - ENTIDAD CORE]

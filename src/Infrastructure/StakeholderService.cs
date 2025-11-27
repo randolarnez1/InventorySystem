@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using Microsoft.Data.Sqlite;
-using InventorySystem.Shared;
+using InventorySystem.Domain; // Para ver 'Supplier'
 
-namespace InventorySystem.Features.Stakeholders
+namespace InventorySystem.Infraestructure
 {
     /// <summary>
     /// [LOGICA DE NEGOCIO Y DATOS]
@@ -116,6 +116,54 @@ namespace InventorySystem.Features.Stakeholders
 
                 command.ExecuteNonQuery();
             }
+        }
+
+        // --- NUEVOS MÉTODOS PARA PROVEEDORES ---
+
+        public void UpdateSupplier(Supplier supplier, string editorName)
+        {
+            using (var connection = new SqliteConnection(DatabaseConfig.ConnectionString))
+            {
+                connection.Open();
+                var command = connection.CreateCommand();
+                command.CommandText = @"
+                    UPDATE Suppliers 
+                    SET Name = $name, ContactEmail = $email,
+                        LastModifiedAt = $date, LastModifiedBy = $editor
+                    WHERE Id = $id";
+
+                command.Parameters.AddWithValue("$name", supplier.Name);
+                command.Parameters.AddWithValue("$email", supplier.ContactEmail);
+                command.Parameters.AddWithValue("$date", DateTime.Now.ToString("o"));
+                command.Parameters.AddWithValue("$editor", editorName);
+                command.Parameters.AddWithValue("$id", supplier.Id);
+                command.ExecuteNonQuery();
+            }
+        }
+
+        public void DeleteSupplier(int id, string userDeleting)
+        {
+            using (var connection = new SqliteConnection(DatabaseConfig.ConnectionString))
+            {
+                connection.Open();
+                var command = connection.CreateCommand();
+                command.CommandText = @"
+                    UPDATE Suppliers 
+                    SET IsDeleted = 1, DeletedAt = $date, DeletedBy = $user
+                    WHERE Id = $id";
+
+                command.Parameters.AddWithValue("$date", DateTime.Now.ToString("o"));
+                command.Parameters.AddWithValue("$user", userDeleting);
+                command.Parameters.AddWithValue("$id", id);
+                command.ExecuteNonQuery();
+            }
+        }
+        
+        // Helper para obtener uno solo
+        public Supplier? GetSupplierById(int id)
+        {
+            var list = GetAllSuppliers();
+            return list.Find(s => s.Id == id);
         }
     }
 }

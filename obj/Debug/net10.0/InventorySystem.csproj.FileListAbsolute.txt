@@ -41,3 +41,4 @@ D:\mauricio\proyectos\InventorySystem\obj\Debug\net10.0\refint\InventorySystem.d
 D:\mauricio\proyectos\InventorySystem\obj\Debug\net10.0\InventorySystem.pdb
 D:\mauricio\proyectos\InventorySystem\obj\Debug\net10.0\InventorySystem.genruntimeconfig.cache
 D:\mauricio\proyectos\InventorySystem\obj\Debug\net10.0\ref\InventorySystem.dll
+D:\mauricio\proyectos\InventorySystem\obj\Debug\net10.0\InventorySystem.sourcelink.json

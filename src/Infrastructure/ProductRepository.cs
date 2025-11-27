@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using Microsoft.Data.Sqlite;
-using InventorySystem.Shared;
+using InventorySystem.Domain; // Para ver 'Product'
 
-namespace InventorySystem.Features.ProductCatalog
+namespace InventorySystem.Infraestructure
 {
     /// <summary>
     /// [LOGICA DE NEGOCIO Y DATOS]
@@ -98,9 +98,11 @@ namespace InventorySystem.Features.ProductCatalog
                 connection.Open();
                 var command = connection.CreateCommand();
 
+                // CORRECCIÓN: Ahora seleccionamos TAMBIÉN las columnas de auditoría
                 command.CommandText = 
                 @"
-                    SELECT Id, Name, Sku, Category, IsPerishable 
+                    SELECT Id, Name, Sku, Category, IsPerishable, 
+                           CreatedAt, CreatedBy, LastModifiedAt, LastModifiedBy
                     FROM Products 
                     WHERE IsDeleted = 0
                 ";
@@ -109,7 +111,6 @@ namespace InventorySystem.Features.ProductCatalog
                 {
                     while (reader.Read())
                     {
-                        // Convertimos el string de la DB de vuelta al Enum
                         Enum.TryParse(reader.GetString(3), out ProductCategory categoryEnum);
 
                         list.Add(new Product
@@ -118,12 +119,87 @@ namespace InventorySystem.Features.ProductCatalog
                             Name = reader.GetString(1),
                             Sku = reader.GetString(2),
                             Category = categoryEnum,
-                            IsPerishable = reader.GetBoolean(4)
+                            IsPerishable = reader.GetBoolean(4),
+                            
+                            // Mapeamos los datos de auditoría para que se vean en consola
+                            CreatedAt = DateTime.Parse(reader.GetString(5)),
+                            CreatedBy = reader.GetString(6),
+                            LastModifiedAt = DateTime.Parse(reader.GetString(7)),
+                            LastModifiedBy = reader.GetString(8)
                         });
                     }
                 }
             }
             return list;
+        }
+        /// <summary>
+        /// [API] Actualiza un producto existente.
+        /// Registra automáticamente quién lo modificó y cuándo.
+        /// </summary>
+        public void UpdateProduct(Product product, string editorName)
+        {
+            using (var connection = new SqliteConnection(DatabaseConfig.ConnectionString))
+            {
+                connection.Open();
+                var command = connection.CreateCommand();
+
+                command.CommandText = 
+                @"
+                    UPDATE Products 
+                    SET Name = $name, 
+                        Category = $cat, 
+                        IsPerishable = $perish,
+                        LastModifiedAt = $date,
+                        LastModifiedBy = $editor
+                    WHERE Id = $id
+                ";
+
+                command.Parameters.AddWithValue("$name", product.Name);
+                command.Parameters.AddWithValue("$cat", product.Category.ToString());
+                command.Parameters.AddWithValue("$perish", product.IsPerishable ? 1 : 0);
+                
+                // Auditoría de edición
+                command.Parameters.AddWithValue("$date", DateTime.Now.ToString("o"));
+                command.Parameters.AddWithValue("$editor", editorName);
+                command.Parameters.AddWithValue("$id", product.Id);
+
+                command.ExecuteNonQuery();
+            }
+        }
+        
+        // Método auxiliar para buscar un solo producto por ID
+        public Product? GetProductById(int id)
+        {
+            // Reutilizamos la lógica de GetAll pero filtrando por ID
+            var all = GetAllProducts();
+            return all.Find(p => p.Id == id);
+        }
+
+        /// <summary>
+        /// [API] Marca un producto como eliminado (Soft Delete).
+        /// </summary>
+        public void DeleteProduct(int id, string userDeleting)
+        {
+            using (var connection = new SqliteConnection(DatabaseConfig.ConnectionString))
+            {
+                connection.Open();
+                var command = connection.CreateCommand();
+
+                command.CommandText = 
+                @"
+                    UPDATE Products 
+                    SET IsDeleted = 1,
+                        DeletedAt = $date,
+                        DeletedBy = $user
+                    WHERE Id = $id
+                ";
+
+                command.Parameters.AddWithValue("$date", DateTime.Now.ToString("o"));
+                command.Parameters.AddWithValue("$user", userDeleting);
+                command.Parameters.AddWithValue("$id", id);
+
+                command.ExecuteNonQuery();
+            }
         }
     }
 }

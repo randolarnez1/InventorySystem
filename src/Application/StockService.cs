@@ -1,9 +1,10 @@
 using System;
 using System.Collections.Generic;
 using Microsoft.Data.Sqlite;
-using InventorySystem.Shared;
+using InventorySystem.Domain;
+using InventorySystem.Infraestructure; // <--- AHORA SÍ FUNCIONARÁ
 
-namespace InventorySystem.Features.InventoryControl
+namespace InventorySystem.Application
 {
     /// <summary>
     /// [LOGICA DE NEGOCIO AVANZADA]
@@ -214,6 +215,50 @@ namespace InventorySystem.Features.InventoryControl
                 }
                 return 0;
             }
+        }
+
+        /// <summary>
+        /// [API - CONSULTA]
+        /// Obtiene todos los lotes con stock positivo para reportes detallados.
+        /// </summary>
+        public List<Batch> GetAllActiveBatches()
+        {
+            var list = new List<Batch>();
+            using (var connection = new SqliteConnection(DatabaseConfig.ConnectionString))
+            {
+                connection.Open();
+                var command = connection.CreateCommand();
+                
+                // Traemos todos los lotes que tienen cantidad > 0 y no están borrados
+                command.CommandText = 
+                @"
+                    SELECT Id, ProductId, SupplierId, Quantity, CostPrice, EntryDate, ExpirationDate 
+                    FROM Batches 
+                    WHERE Quantity > 0 AND IsDeleted = 0
+                    ORDER BY ProductId ASC, EntryDate ASC
+                ";
+
+                using (var reader = command.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        DateTime? expDate = null;
+                        if (!reader.IsDBNull(6)) expDate = DateTime.Parse(reader.GetString(6));
+
+                        list.Add(new Batch
+                        {
+                            Id = reader.GetInt32(0),
+                            ProductId = reader.GetInt32(1),
+                            SupplierId = reader.GetInt32(2),
+                            Quantity = reader.GetInt32(3),
+                            CostPrice = reader.GetDecimal(4),
+                            EntryDate = DateTime.Parse(reader.GetString(5)),
+                            ExpirationDate = expDate
+                        });
+                    }
+                }
+            }
+            return list;
         }
     }
 }
