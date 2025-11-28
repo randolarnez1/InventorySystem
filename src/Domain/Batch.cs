@@ -1,3 +1,5 @@
+// Este archivo lo trabajo leandro
+
 namespace InventorySystem.Domain
 {
     /// <summary>

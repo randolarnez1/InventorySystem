@@ -307,34 +307,24 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\CATEC GAMER PC-96\\.nuget\\packages\\": {},
-    "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {},
-    "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder": {}
+    "C:\\Users\\lobo.DESKTOP-BG9I1FB\\.nuget\\packages\\": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "D:\\mauricio\\proyectos\\InventorySystem\\InventorySystem.csproj",
+      "projectUniqueName": "C:\\project#\\InventorySystem\\InventorySystem.csproj",
       "projectName": "InventorySystem",
-      "projectPath": "D:\\mauricio\\proyectos\\InventorySystem\\InventorySystem.csproj",
-      "packagesPath": "C:\\Users\\CATEC GAMER PC-96\\.nuget\\packages\\",
-      "outputPath": "D:\\mauricio\\proyectos\\InventorySystem\\obj\\",
+      "projectPath": "C:\\project#\\InventorySystem\\InventorySystem.csproj",
+      "packagesPath": "C:\\Users\\lobo.DESKTOP-BG9I1FB\\.nuget\\packages\\",
+      "outputPath": "C:\\project#\\InventorySystem\\obj\\",
       "projectStyle": "PackageReference",
-      "fallbackFolders": [
-        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages",
-        "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"
-      ],
       "configFilePaths": [
-        "C:\\Users\\CATEC GAMER PC-96\\AppData\\Roaming\\NuGet\\NuGet.Config",
-        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
-        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        "C:\\Users\\lobo.DESKTOP-BG9I1FB\\AppData\\Roaming\\NuGet\\NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net10.0"
       ],
       "sources": {
-        "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-        "C:\\Program Files\\dotnet\\library-packs": {},
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
