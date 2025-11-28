@@ -1,7 +1,9 @@
+// Este archivo echo por Manuel (Lógica de Seguridad).
+// CAPA: Application (Contiene la lógica de negocio y las llamadas a la Infraestructura, es el 'Core' de la seguridad).
 using System;
-using System.Security.Cryptography;
-using System.Text;
-using Microsoft.Data.Sqlite;
+using System.Security.Cryptography; // Importa el namespace para algoritmos de encriptación y hashing (SHA256).
+using System.Text;// Utilizado para la codificación/decodificación de cadenas (string) a bytes (necesario para el hash).
+using Microsoft.Data.Sqlite;// Driver oficial de Microsoft para la gestión de comandos SQL y la conexión a la base de datos SQLite.
 using InventorySystem.Domain;       
 using InventorySystem.Infraestructure; // <--- AHORA SÍ FUNCIONARÁ
 
@@ -9,10 +11,15 @@ namespace InventorySystem.Application
 {
     /// <summary>
     /// [LOGICA DE NEGOCIO Y ACCESO A DATOS]
-    /// Servicio encargado de gestionar todo lo relacionado con Usuarios.
-    /// Actúa como el Repositorio y el Servicio a la vez para simplificar la estructura.
+    /// Servicio de Aplicación (`Service Layer`) encargado de gestionar todas las operaciones
+    /// de la entidad `User` (CRUD, Login y Hashing).
+    ///
+    /// CONCEPTO ARQUITECTÓNICO:
+    /// Este servicio encapsula tanto la lógica de negocio (Hashing, Roles) como el acceso directo a datos (Repositorio),
+    /// simplificando la estructura para esta fase del proyecto.
     /// </summary>
     public class UserService
+    // Constructor del servicio
     {
         /// <summary>
         /// [INFRAESTRUCTURA]
@@ -22,6 +29,7 @@ namespace InventorySystem.Application
         {
             using (var connection = new SqliteConnection(DatabaseConfig.ConnectionString))
             {
+                // 1. Abre la conexión al archivo de la base de datos (si el archivo no existe, lo crea).
                 connection.Open();
                 var command = connection.CreateCommand();
                 
@@ -121,6 +129,7 @@ namespace InventorySystem.Application
                         // Verificamos si la contraseña ingresada coincide con el hash guardado
                         if (storedHash == HashPassword(password))
                         {
+                            // Autenticación Exitosa: Mapea solo los datos necesarios (excluyendo el hash) a la Entidad User.
                             return new User
                             {
                                 Id = reader.GetInt32(0),
@@ -180,6 +189,9 @@ namespace InventorySystem.Application
         }
 
         // [API] Actualizar usuario (Cambiar contraseña o rol)
+        ///<summary>
+        /// Permite actualizar la contraseña de un usuario y registra la auditoría de modificación.
+        /// </summary
         public void UpdateUser(int userId, string newPassword, string editorName)
         {
             using (var connection = new SqliteConnection(DatabaseConfig.ConnectionString))
@@ -196,7 +208,7 @@ namespace InventorySystem.Application
                         LastModifiedBy = $editor
                     WHERE Id = $id
                 ";
-
+                // Se encripta la nueva contraseña.
                 command.Parameters.AddWithValue("$hash", HashPassword(newPassword));
                 command.Parameters.AddWithValue("$date", DateTime.Now.ToString("o"));
                 command.Parameters.AddWithValue("$editor", editorName);
@@ -207,6 +219,9 @@ namespace InventorySystem.Application
         }
         
         // Helper para obtener usuario por ID (necesario para verificar antes de editar)
+        /// <summary>
+        /// Función de utilidad para recuperar un usuario individual.
+        /// </summary>
         public User? GetUserById(int id)
         {
             // Reutilizamos la lógica simple de buscar en la lista completa
@@ -214,12 +229,20 @@ namespace InventorySystem.Application
         }
 
         // [API] Borrar usuario
+        // <summary>
+        /// Implementa la funcionalidad de Borrado Lógico (Soft Delete).
+        /// En lugar de eliminar la fila, solo la marca como `IsDeleted = 1` y registra la auditoría de borrado.
+        /// Esto conserva la integridad histórica y contable de los datos.
+        /// </summary>
+        /// <param name="id">ID del usuario a marcar como borrado.</param>
+        /// <param name="adminUser">Nombre del administrador que ejecutó el borrado.</param>
         public void DeleteUser(int id, string adminUser)
         {
             using (var connection = new SqliteConnection(DatabaseConfig.ConnectionString))
             {
                 connection.Open();
                 var command = connection.CreateCommand();
+                // Comando SQL para la actualización de los campos de Soft Delete.
                 command.CommandText = "UPDATE Users SET IsDeleted = 1, DeletedAt = $date, DeletedBy = $admin WHERE Id = $id";
                 command.Parameters.AddWithValue("$date", DateTime.Now.ToString("o"));
                 command.Parameters.AddWithValue("$admin", adminUser);
