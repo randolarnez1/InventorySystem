@@ -22,14 +22,14 @@ namespace InventorySystem
         // compartida durante toda la vida de la aplicación.
         
         // Servicio de Usuarios: Se encarga del Login, Hashing y Seguridad.
-        static UserService _userService = new UserService();
+        static UserService _userService = new UserService();//SERVICIO DE USUARIOS✅✅✅✅✅✅
         
         // Repositorio de Productos: Se encarga del CRUD del catálogo en la BD.
         static ProductRepository _productRepo = new ProductRepository();
         
         // Repositorio de Proveedores: Maneja la información de terceros.
-        static StakeholderService _stakeholderService = new StakeholderService();
-        
+        static StakeholderService _stakeholderService = new StakeholderService();//SERVICIO DE PROVEEDORES✅✅✅✅✅✅
+
         // Servicio de Stock: EL NÚCLEO. Maneja el algoritmo FIFO y los Lotes.
         static StockService _stockService = new StockService();
         
@@ -52,7 +52,8 @@ namespace InventorySystem
 
             // --- BUCLE DE VIDA DE LA APLICACIÓN (GAME LOOP) ---
             // Usamos 'while(true)' para que el programa nunca se cierre por sí solo.
-            while (true)
+
+            while (true)//WHILE INFINITO PARA QUE EL PROGRAMA NUNCA SE CIERRE✅✅✅✅✅✅
             {
                 // Reiniciamos la sesión actual a null.
                 // Esto asegura que si el usuario cierra sesión, se le obligue a loguearse de nuevo.
@@ -180,7 +181,9 @@ namespace InventorySystem
                         // --- EDITAR PRODUCTO ---
                         Console.Write("Ingrese ID a Editar: "); 
                         // TryParse intenta convertir texto a número. Si falla, devuelve false y no entra al if.
-                        if(int.TryParse(Console.ReadLine(), out int ide)) {
+                        //TRYPARSE INTENTA CONVERTIR TEXTO A NÚMERO✅✅✅✅✅✅
+                        if(int.TryParse(Console.ReadLine(), out int ide)) //TRYPARSE INTENTA CONVERTIR TEXTO A NÚMERO✅✅✅✅✅✅
+                        {
                             // Primero buscamos el objeto original
                             var p = _productRepo.GetProductById(ide);
                             if(p!=null){
@@ -195,7 +198,7 @@ namespace InventorySystem
                         // --- ELIMINAR PRODUCTO ---
                         // Realizamos un Soft Delete (Borrado Lógico)
                         Console.Write("Ingrese ID a Borrar: "); 
-                        if(int.TryParse(Console.ReadLine(), out int idd)) 
+                        if(int.TryParse(Console.ReadLine(), out int idd)) //TRYPARSE INTENTA CONVERTIR TEXTO A NÚMERO✅✅✅✅✅✅
                             _productRepo.DeleteProduct(idd, _currentUser.Username);
                         break;
                         
@@ -314,7 +317,8 @@ namespace InventorySystem
                     
                     Console.Write("Ingrese ID Proveedor: ");
                     // Validamos que el ID sea un número Y que exista en la lista
-                    if(!int.TryParse(Console.ReadLine(), out int sid) || suppliers.Find(s=>s.Id==sid)==null) {
+                    if(!int.TryParse(Console.ReadLine(), out int sid) || suppliers.Find(s=>s.Id==sid)==null)//TRYPARSE INTENTA CONVERTIR TEXTO A NÚMERO✅✅✅✅✅✅
+                     {
                         Console.WriteLine("❌ Proveedor no válido."); Console.ReadKey(); continue;
                     }
 
@@ -338,7 +342,7 @@ namespace InventorySystem
                     if (targetProduct.IsPerishable)
                     {
                         // Si es perecedero, OBLIGAMOS a poner fecha.
-                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.ForegroundColor = ConsoleColor.Yellow;//FOREGROUND COLOR AMARILLO✅✅✅✅✅✅
                         Console.WriteLine("⚠️ PRODUCTO PERECEDERO: FECHA OBLIGATORIA.");
                         Console.ResetColor();
                         
@@ -378,7 +382,7 @@ namespace InventorySystem
                     if(int.TryParse(Console.ReadLine(), out int pid)) {
                         // Verificamos stock disponible antes de intentar vender
                         int current = _stockService.GetTotalStock(pid);
-                        if(current == 0) Console.WriteLine("❌ No hay stock disponible.");
+                        if(current == 0) Console.WriteLine("❌ No hay stock disponible.");//VALIDACION DE ESTADO CON CONTADOR
                         else {
                             Console.Write($"Cantidad (Máx {current}): ");
                             int.TryParse(Console.ReadLine(), out int qty);

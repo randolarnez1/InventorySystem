@@ -307,19 +307,19 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\Mao\\.nuget\\packages\\": {}
+    "C:\\Users\\CATEC PC 29\\.nuget\\packages\\": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\Mao\\Documents\\porgramacion\\personal\\InventorySystem\\InventorySystem.csproj",
+      "projectUniqueName": "C:\\Users\\CATEC PC 29\\Documents\\mao\\personal\\InventorySystem\\InventorySystem.csproj",
       "projectName": "InventorySystem",
-      "projectPath": "C:\\Users\\Mao\\Documents\\porgramacion\\personal\\InventorySystem\\InventorySystem.csproj",
-      "packagesPath": "C:\\Users\\Mao\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\Mao\\Documents\\porgramacion\\personal\\InventorySystem\\obj\\",
+      "projectPath": "C:\\Users\\CATEC PC 29\\Documents\\mao\\personal\\InventorySystem\\InventorySystem.csproj",
+      "packagesPath": "C:\\Users\\CATEC PC 29\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\CATEC PC 29\\Documents\\mao\\personal\\InventorySystem\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
-        "C:\\Users\\Mao\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        "C:\\Users\\CATEC PC 29\\AppData\\Roaming\\NuGet\\NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net10.0"
