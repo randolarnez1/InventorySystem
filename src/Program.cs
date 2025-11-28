@@ -1,4 +1,6 @@
-﻿using System;
+﻿//Este archivo lo trabajo MAURICIO oño
+
+using System;
 using System.Collections.Generic;
 using InventorySystem.Domain;
 using InventorySystem.Infraestructure;
