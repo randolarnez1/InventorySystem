@@ -1,3 +1,5 @@
+//este archivo fue echo por manuel
+
 using System;
 
 namespace InventorySystem.Domain
