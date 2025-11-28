@@ -32,3 +32,11 @@ namespace InventorySystem.Domain
         public DateTime? ExpirationDate { get; set; }
     }
 }
+
+// --------------------------------------------------------------------------------------
+//  Servicio de Reportes de Inventario
+//
+//  Este servicio genera reportes del inventario consultando los datos desde el repositorio. 
+//  Permite obtener información resumida como el total de productos, el valor total del 
+//  inventario y una lista básica de artículos con su cantidad y precio.
+// --------------------------------------------------------------------------------------
